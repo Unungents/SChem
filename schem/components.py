@@ -548,41 +548,16 @@ class ProgrammedInput(Input):
 
 class ChessInput(ProgrammedInput):
 
-    @staticmethod
-    def in_check(k, q, n):
-
-        q = (q[0] - k[0], q[1] - k[1])
-        n = (n[0] - k[0], n[1] - k[1])
-
-        if set((abs(n[0]), abs(n[1]))) == {1, 2}:
-            return True
-
-        if 0 == n[1] == q[1] and ((0 < n[0] < q[0]) or (q[0] < n[0] < 0)):
-            return False
-        if 0 == n[0] == q[0] and ((0 < n[1] < q[1]) or (q[1] < n[1] < 0)):
-            return False
-
-        if 0 == q[1]:
-            return True
-        if 0 == q[0]:
-            return True
-
-        if abs(q[0]) == abs(q[1]):
-            qn = n[0] / q[0]
-            if qn == n[1] / q[1]:  # q+n aligned
-                return qn > 1
-            else:
-                return True
-        return False
-
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.molecules = []
         random.seed(2024)
         base = ["00711","01711","02711","03710","10711","11711","12711","13710","20711","21711","22711","23710","30701","31701","32701","33700"]
-        for _ in range(100):
+        for i in range(250):
             pos_raw = random.sample(range(16), 3)
-            pos = [(x // 4, x % 4) for x in pos_raw]
+            pos = [str(x // 4) + str(x % 4) for x in pos_raw]
+            # if i < 10:
+            #     print(pos)
             s = base.copy()
             for piece in zip(pos_raw, ['6', '201', '203']):
                 s[piece[0]] = s[piece[0]][:2] + piece[1] + s[piece[0]][3:]
@@ -596,10 +571,9 @@ class ChessInput(ProgrammedInput):
         # -1 necessary since starting cycle is 1 not 0, while mod == 1 would break on rate = 1
         # Note that we tell the output pipe it's the next cycle, to 'move' its contents before outputting.
         # This prevents double-moving the molecule and allows for continuous flow in the rate = 1 case
-        if (cycle - 1) % self.input_rate == 0 and self.out_pipe.get(0, cycle + 1) is None:
+        if (cycle - 1) % self.input_rate == 0 and self.out_pipe.get(0, cycle + 1) is None and self.num_inputs < len(self.molecules):
             self.out_pipe.push(self.molecules[self.num_inputs].copy(), cycle + 1)
             self.num_inputs += 1
-            self.num_inputs = self.num_inputs % 100
 
 
 class Output(Component):
@@ -657,6 +631,8 @@ class Output(Component):
         return self
 
 
+active_molecules = None
+
 class ChessOutput(Output):
 
     @staticmethod
@@ -689,11 +665,11 @@ class ChessOutput(Output):
     def __init__(self, output_dict, **kwargs):
         super().__init__(output_dict, **kwargs)
         self.output_molecules = []
-        self.target_count = 100
+        self.target_count = 200
 
         random.seed(2024)
         base = ["00711","01711","02711","03710","10711","11711","12711","13710","20711","21711","22711","23710","30701","31701","32701","33700"]
-        for i in range(100):
+        for i in range(250):
             pos_raw = random.sample(range(16), 3)
             pos = [(x // 4, x % 4) for x in pos_raw]
             # if not i:
@@ -713,13 +689,25 @@ class ChessOutput(Output):
 
         molecule = self.in_pipe.pop(cycle)
         (mol_q, self.output_molecule) = self.output_molecules[self.current_count]
+        global active_molecules
+        if active_molecules:
+            if mol_q != active_molecules[1]:
+                active_molecules = [active_molecules[1], mol_q]
+                # print('ping')
+        else:
+            active_molecules = [None, mol_q]
+        # print(mol_q)
+        # from .exceptions import exc_solution
+        # exc_solution = 'component'
         if molecule is not None:
             if not molecule.isomorphic(self.output_molecule):
                 raise InvalidOutputError(f"Invalid output molecule; expected:\n{self.output_molecule}\n\nbut got:\n{molecule}\non the input\n{mol_q}")
 
             if self.current_count < self.target_count:
                 self.current_count += 1
+                # print('good')
 
+            # print(self.current_count)
             if self.current_count == self.target_count:
                 return True
 
