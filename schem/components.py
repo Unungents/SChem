@@ -17,6 +17,9 @@ from .schem_random import SChemRandom
 from .waldo import Waldo, Instruction, InstructionType
 
 
+active_molecules = None
+question_answers = []
+
 # Dimensions of components that differ from the standard dimensions for their type
 COMPONENT_SHAPES = {
     # SC stores co-ordinates as col, row
@@ -548,22 +551,50 @@ class ProgrammedInput(Input):
 
 class ChessInput(ProgrammedInput):
 
+    @staticmethod
+    def in_check(k, q, n):
+
+        q = (q[0] - k[0], q[1] - k[1])
+        n = (n[0] - k[0], n[1] - k[1])
+
+        if set((abs(n[0]), abs(n[1]))) == {1, 2}:
+            return True
+
+        if 0 == n[1] == q[1] and ((0 < n[0] < q[0]) or (q[0] < n[0] < 0)):
+            return False
+        if 0 == n[0] == q[0] and ((0 < n[1] < q[1]) or (q[1] < n[1] < 0)):
+            return False
+
+        if 0 == q[1]:
+            return True
+        if 0 == q[0]:
+            return True
+
+        if abs(q[0]) == abs(q[1]):
+            qn = n[0] / q[0]
+            if qn > 0 and qn == n[1] / q[1]:  # q+n aligned
+                return qn > 1
+            else:
+                return True
+        return False
+
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.molecules = []
-        random.seed(2024)
+        random.seed(2026)
         base = ["00711","01711","02711","03710","10711","11711","12711","13710","20711","21711","22711","23710","30701","31701","32701","33700"]
-        for i in range(250):
-            pos_raw = random.sample(range(16), 3)
-            pos = [str(x // 4) + str(x % 4) for x in pos_raw]
-            # if i < 10:
-            #     print(pos)
+        triplets = [(a, b, c) for a in range(16) for b in range(16) for c in range(16) if len({a, b, c}) == 3]
+        random.shuffle(triplets)
+        for i, pos_raw in enumerate(triplets[:250]):
+            pos = [((x // 4), (x % 4)) for x in pos_raw]
             s = base.copy()
             for piece in zip(pos_raw, ['6', '201', '203']):
                 s[piece[0]] = s[piece[0]][:2] + piece[1] + s[piece[0]][3:]
             s = 'Chessboard;?;' + ';'.join(s)
             mol = Molecule.from_json_string(s)
-            # mol.answer = Molecule.from_json_string("?;?;00" + ('6' if self.in_check(*pos) else '201') + "11")
+            answer = Molecule.from_json_string("?;?;00" + ('201' if self.in_check(*pos) else '6') + "00")
+            global question_answers
+            question_answers.append((mol, answer))
             self.molecules.append(mol)
 
     def move_contents(self, cycle):
@@ -631,56 +662,13 @@ class Output(Component):
         return self
 
 
-active_molecules = None
-
 class ChessOutput(Output):
-
-    @staticmethod
-    def in_check(k, q, n):
-
-        q = (q[0] - k[0], q[1] - k[1])
-        n = (n[0] - k[0], n[1] - k[1])
-
-        if set((abs(n[0]), abs(n[1]))) == {1, 2}:
-            return True
-
-        if 0 == n[1] == q[1] and ((0 < n[0] < q[0]) or (q[0] < n[0] < 0)):
-            return False
-        if 0 == n[0] == q[0] and ((0 < n[1] < q[1]) or (q[1] < n[1] < 0)):
-            return False
-
-        if 0 == q[1]:
-            return True
-        if 0 == q[0]:
-            return True
-
-        if abs(q[0]) == abs(q[1]):
-            qn = n[0] / q[0]
-            if qn == n[1] / q[1]:  # q+n aligned
-                return qn > 1
-            else:
-                return True
-        return False
 
     def __init__(self, output_dict, **kwargs):
         super().__init__(output_dict, **kwargs)
-        self.output_molecules = []
+        global question_answers
+        self.output_molecules = question_answers
         self.target_count = 200
-
-        random.seed(2024)
-        base = ["00711","01711","02711","03710","10711","11711","12711","13710","20711","21711","22711","23710","30701","31701","32701","33700"]
-        for i in range(250):
-            pos_raw = random.sample(range(16), 3)
-            pos = [(x // 4, x % 4) for x in pos_raw]
-            # if not i:
-            #     print(pos)
-            s = base.copy()
-            for piece in zip(pos_raw, ['6', '201', '203']):
-                s[piece[0]] = s[piece[0]][:2] + piece[1] + s[piece[0]][3:]
-            s = 'Chessboard;?;' + ';'.join(s)
-            mol_q = Molecule.from_json_string(s)
-            mol_a = Molecule.from_json_string("?;?;00" + ('201' if self.in_check(*pos) else '6') + "00")
-            self.output_molecules.append((mol_q, mol_a))
 
     def do_instant_actions(self, cycle):
         """Check for and process any incoming molecule, and return True if this output is completed, else False."""
@@ -693,17 +681,17 @@ class ChessOutput(Output):
         if active_molecules:
             if mol_q != active_molecules[1]:
                 active_molecules = [active_molecules[1], mol_q]
-                # print('ping')
         else:
             active_molecules = [None, mol_q]
         # print(mol_q)
         if molecule is not None:
             if not molecule.isomorphic(self.output_molecule):
-                raise InvalidOutputError(f"Invalid output molecule; expected:\n{self.output_molecule}\n\nbut got:\n{molecule}\non the input\n{mol_q}")
+                print(self.current_count)
+                raise InvalidOutputError(f"Invalid output molecule; expected:\n{self.output_molecule}\n\nbut got:\n{molecule}")
 
             if self.current_count < self.target_count:
                 self.current_count += 1
-                # print('good')
+                print(self.current_count)
 
             # print(self.current_count)
             if self.current_count == self.target_count:
