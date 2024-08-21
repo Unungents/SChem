@@ -697,8 +697,6 @@ class ChessOutput(Output):
         else:
             active_molecules = [None, mol_q]
         # print(mol_q)
-        # from .exceptions import exc_solution
-        # exc_solution = 'component'
         if molecule is not None:
             if not molecule.isomorphic(self.output_molecule):
                 raise InvalidOutputError(f"Invalid output molecule; expected:\n{self.output_molecule}\n\nbut got:\n{molecule}\non the input\n{mol_q}")
