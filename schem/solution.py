@@ -1131,6 +1131,9 @@ class Solution:
         if self.level.type in {'defense', 'sandbox'}:
             hash_states = 0
 
+        if self.level.name == 'Chess':
+            hash_states = 0
+
         # Default debug view to the reactor's interior in research levels
         if debug and self.level['type'].startswith('research'):
             debug.reactor = 0

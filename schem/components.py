@@ -558,33 +558,50 @@ class ChessInput(ProgrammedInput):
         n = (n[0] - k[0], n[1] - k[1])
 
         if set((abs(n[0]), abs(n[1]))) == {1, 2}:
+            # print('knight')
             return True
 
         if 0 == n[1] == q[1] and ((0 < n[0] < q[0]) or (q[0] < n[0] < 0)):
+            # print('blocked h')
             return False
         if 0 == n[0] == q[0] and ((0 < n[1] < q[1]) or (q[1] < n[1] < 0)):
+            # print('blocked v')
             return False
 
         if 0 == q[1]:
+            # print('h')
             return True
         if 0 == q[0]:
+            # print('v')
             return True
 
         if abs(q[0]) == abs(q[1]):
             qn = n[0] / q[0]
             if qn > 0 and qn == n[1] / q[1]:  # q+n aligned
+                # if qn > 1:
+                #     print('d')
+                # else:
+                #     print('blocked d')
                 return qn > 1
             else:
+                # print('d')
                 return True
         return False
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.molecules = []
-        random.seed(2026)
+        random.seed(2024)
         base = ["00711","01711","02711","03710","10711","11711","12711","13710","20711","21711","22711","23710","30701","31701","32701","33700"]
         triplets = [(a, b, c) for a in range(16) for b in range(16) for c in range(16) if len({a, b, c}) == 3]
         random.shuffle(triplets)
+        triplets.insert(1, triplets.pop(triplets.index((4,6,5))))
+        triplets.insert(2, triplets.pop(triplets.index((6,4,5))))
+        triplets.insert(6, triplets.pop(triplets.index((7,13,10))))
+        triplets.insert(10, triplets.pop(triplets.index((0,15,10))))
+        triplets.insert(15, triplets.pop(triplets.index((9,3,6))))
+        triplets.insert(16, triplets.pop(triplets.index((12,3,6))))
+        triplets.insert(24, triplets.pop(triplets.index((15,3,11))))
         for i, pos_raw in enumerate(triplets[:250]):
             pos = [((x // 4), (x % 4)) for x in pos_raw]
             s = base.copy()
@@ -596,6 +613,9 @@ class ChessInput(ProgrammedInput):
             global question_answers
             question_answers.append((mol, answer))
             self.molecules.append(mol)
+            # if 20 > i:
+            #     print(mol)
+            #     print()
 
     def move_contents(self, cycle):
         """Create a new molecule if on the correct cycle and the pipe has room."""
@@ -668,7 +688,8 @@ class ChessOutput(Output):
         super().__init__(output_dict, **kwargs)
         global question_answers
         self.output_molecules = question_answers
-        self.target_count = 200
+        if self.target_count < 100:
+            self.target_count = 200
 
     def do_instant_actions(self, cycle):
         """Check for and process any incoming molecule, and return True if this output is completed, else False."""
@@ -686,14 +707,12 @@ class ChessOutput(Output):
         # print(mol_q)
         if molecule is not None:
             if not molecule.isomorphic(self.output_molecule):
-                print(self.current_count)
                 raise InvalidOutputError(f"Invalid output molecule; expected:\n{self.output_molecule}\n\nbut got:\n{molecule}")
 
             if self.current_count < self.target_count:
                 self.current_count += 1
-                print(self.current_count)
+                # print(self.current_count)
 
-            # print(self.current_count)
             if self.current_count == self.target_count:
                 return True
 
