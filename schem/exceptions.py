@@ -19,9 +19,9 @@ class SolutionRunError(RuntimeError):
         from .components import active_molecules
         if active_molecules:  # will only be non-None in Chess
             if '\non the input\n' not in message:
-                message += f'\n\non the input\n\n{active_molecules[1]}'
+                message += f'\n\non the input\n\n```{active_molecules[1]}```'
                 if active_molecules[0]:
-                    message += f'\n\nprevious input for reference:\n\n{active_molecules[0]}'
+                    message += f'\n\nprevious input for reference:\n\n```{active_molecules[0]}```'
         super().__init__(message)
 
 
