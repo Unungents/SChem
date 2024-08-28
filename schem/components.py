@@ -391,7 +391,7 @@ class Input(Component):
         #     return object.__new__(ChessInput)
 
         if 'repeating-molecules' in input_dict:
-            if input_dict['repeating-molecules'][0] == "Chessboard-N;?;11711;21711;31701;32701;22711;12711;13710;23710;3320300;0320110;02711;01711;00711;10611;30701;20711":
+            if len(input_dict['repeating-molecules']) > 0 and input_dict['repeating-molecules'][0] == "Chessboard-N;?;11711;21711;31701;32701;22711;12711;13710;23710;3320300;0320110;02711;01711;00711;10611;30701;20711":
                 return object.__new__(ChessInput)
             return object.__new__(ProgrammedInput)
 
@@ -602,6 +602,7 @@ class ChessInput(ProgrammedInput):
         triplets.insert(15, triplets.pop(triplets.index((9,3,6))))
         triplets.insert(16, triplets.pop(triplets.index((12,3,6))))
         triplets.insert(24, triplets.pop(triplets.index((15,3,11))))
+        print(triplets)
         for i, pos_raw in enumerate(triplets[:250]):
             pos = [((x // 4), (x % 4)) for x in pos_raw]
             s = base.copy()
